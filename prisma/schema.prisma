@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  emoji        String        @default("💰")
+  goal_group   String        @default("desejos")
+  transactions Transaction[]
+  budget       Budget?
+  createdAt    DateTime      @default(now())
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  amount      Float
+  description String
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model Budget {
+  id         Int      @id @default(autoincrement())
+  categoryId Int      @unique
+  category   Category @relation(fields: [categoryId], references: [id])
+  limit      Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Config {
+  id       Int    @id @default(1)
+  phone    String
+  timezone String @default("America/Sao_Paulo")
+}
+
+model Salary {
+  id        Int      @id @default(1)
+  amount    Float    @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model BudgetGoal {
+  id         Int      @id @default(autoincrement())
+  group_name String   @unique
+  label      String
+  emoji      String   @default("🎯")
+  percentage Float
+  updatedAt  DateTime @updatedAt
+}
