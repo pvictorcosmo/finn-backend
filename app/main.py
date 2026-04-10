@@ -1,15 +1,26 @@
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.db import engine, Base, SessionLocal
+from app.core.config import settings
 from app.core.seed import seed
 from app.routers import messages, data, goals
 from app.routers.actions import build_daily_summary, process_monthly_installments, process_monthly_recurring
 
 scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
+
+
+def keep_alive():
+    """Ping /health para manter o Render free tier ativo."""
+    if settings.render_external_url:
+        try:
+            httpx.get(f"{settings.render_external_url}/health", timeout=10)
+        except Exception:
+            pass
 
 
 def daily_summary_job():
@@ -38,6 +49,8 @@ async def lifespan(app: FastAPI):
     seed()
     scheduler.add_job(daily_summary_job, "cron", hour=20, minute=0)
     scheduler.add_job(monthly_installments_job, "cron", day=1, hour=8, minute=0)
+    if settings.render_external_url:
+        scheduler.add_job(keep_alive, "interval", minutes=14, id="keep_alive")
     scheduler.start()
     print("⏰ Cron agendado (resumo 20h, parcelas dia 1 às 8h)")
     yield
